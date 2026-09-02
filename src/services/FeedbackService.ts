@@ -21,7 +21,9 @@ export class FeedbackService {
     };
 
     FeedbackDao.insert(row);
-    void AnalysisService.analyzeFeedback(row.id);
+    void AnalysisService.analyzeFeedback(row.id).catch((error) => {
+      console.error(`Unhandled error analyzing feedback ${row.id}:`, error);
+    });
 
     return FeedbackService.toApiView(row);
   }
@@ -50,7 +52,9 @@ export class FeedbackService {
     }
 
     FeedbackDao.resetForRetry(id);
-    void AnalysisService.analyzeFeedback(id);
+    void AnalysisService.analyzeFeedback(id).catch((error) => {
+      console.error(`Unhandled error analyzing feedback ${id}:`, error);
+    });
 
     return FeedbackService.toApiView(FeedbackDao.findById(id)!);
   }

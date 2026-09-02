@@ -36,6 +36,12 @@ driven interactively step by step against the challenge spec.
    and deliberately setting them low (`2` per `60s`) so the guardrail could
    be triggered and observed within one manual test run instead of needing
    dozens of requests.
+5. "review the code and the mission - check if there is something missing -
+   dont implement it immediately but tell me what u think..." — asked for a
+   self-review pass before wiring in the fix. Surfaced two real robustness
+   gaps (no `.catch()` on the fire-and-forget analysis calls, no global
+   Express error handler) which were confirmed with the user before being
+   implemented and verified live (see below).
 
 ## Where AI output needed correction
 
@@ -87,3 +93,8 @@ this session.
 - Step 5: add total count / `has_more` if the response is ever wrapped in
   a real pagination envelope; add sorting options beyond the fixed
   `created_at DESC`.
+- Robustness hardening: `uncaughtException` handling that just logs and
+  continues is a deliberate tradeoff for this demo's single background-job
+  shape, not something I'd want on a system with untrusted post-crash
+  state — worth a real restart strategy (a process manager) if this ever
+  became a real service.

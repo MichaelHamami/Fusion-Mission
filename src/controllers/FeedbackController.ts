@@ -28,7 +28,7 @@ export class FeedbackController {
   }
 
   /** Filtering (?status=) and pagination (?pageNumber=&pageSize=) are optional per spec. */
-  static list(req: Request, res: Response): Response {
+  static get(req: Request, res: Response): Response {
     const parsed = listFeedbackQuerySchema.safeParse(req.query);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.flatten() });
@@ -37,7 +37,7 @@ export class FeedbackController {
     return res.json(FeedbackService.listFeedback(parsed.data));
   }
 
-  static getOne(req: Request, res: Response): Response {
+  static getById(req: Request, res: Response): Response {
     try {
       return res.json(FeedbackService.getFeedback(req.params.id));
     } catch (error) {

@@ -181,6 +181,38 @@ adding the explicitly-optional filtering/pagination on top:
   `created_at DESC` order; an invalid `status` value or `pageSize=0` both
   return 400 with a field-level Zod error.
 
+### Robustness hardening ✅
+
+Added after a self-review pass against the spec's "engineering judgment and
+robustness" criterion surfaced two real gaps:
+
+- **Fire-and-forget analysis had no error handling.** `createFeedback` and
+  `retryAnalysis` kick off `AnalysisService.analyzeFeedback` without
+  awaiting it. Every *expected* failure inside it was already handled
+  (API error, bad JSON, schema mismatch), but anything unexpected (e.g. a
+  DB write throwing) had nowhere to go — an unhandled promise rejection,
+  which crashes the whole Node process by default. Both call sites in
+  `FeedbackService` now chain `.catch()` with a feedback-id-specific log
+  message. `server.ts` also registers `process.on("unhandledRejection")`
+  and `process.on("uncaughtException")` as a last-resort net for anything
+  outside those two call sites — logs and keeps running rather than
+  exiting, which is the right tradeoff for a single background-job demo
+  app (not a general recommendation for a system with untrusted state
+  after a crash).
+- **No global Express error handler.** An uncaught throw in a route
+  handler fell through to Express's default handler — an HTML page,
+  inconsistent with the rest of the JSON API, and can leak a stack trace.
+  `app.ts` now has a catch-all 404 JSON handler and a 4-arg error-handling
+  middleware (`(err, req, res, next)` — the 4th param is required for
+  Express to recognize it as an error handler even though it's unused)
+  that logs server-side and always replies `500 {"error": "Internal
+  server error"}` to the client, no stack trace exposed.
+- Verified both live: a route handler forced to throw returned a clean
+  JSON 500 and the server kept serving other requests immediately after;
+  a feedback item forced to throw synchronously inside
+  `analyzeFeedback` (bypassing every existing try/catch) was caught by the
+  new `.catch()`, logged with its feedback id, and the server stayed up.
+
 ## AI Collaboration Log
 
 See [AI_LOG.md](./AI_LOG.md).
