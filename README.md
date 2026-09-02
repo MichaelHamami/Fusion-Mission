@@ -120,9 +120,40 @@ halves of the same flow.
   reconciliation-on-startup step). Retry only covers `FAILED`. Acceptable
   for this challenge's scope; flagged here rather than silently ignored.
 
-### Step 4 — Guardrail (not started)
+### Step 4 — Guardrail: Rate-limit AI analysis ✅
 
-### Step 4 — Guardrail (not started)
+Chose rate-limiting over the other three options (dedup / cache / truncation)
+because it's the guardrail that most directly protects the thing actually at
+risk here: uncontrolled Anthropic API spend from a burst of submissions. The
+others are about correctness or efficiency, not runtime cost.
+
+- `AnalysisRateLimiter` (`src/services/AnalysisRateLimiter.ts`) is a small
+  sliding-window counter: a static in-memory array of call timestamps,
+  pruned to the current window on every check.
+- The two knobs are top-of-file exported consts —
+  `RATE_LIMIT_MAX_ANALYSES` and `RATE_LIMIT_WINDOW_MS` — specifically so
+  they're trivial to find and tune without touching any logic. **Currently
+  set low on purpose (`2` analyses per `60s`) for manual verification**;
+  bump these for real usage.
+- Checked in `AnalysisService.analyzeFeedback`, right before the AI call
+  (after the `ANALYZING` transition, so it still goes through the state
+  machine). If exceeded, the item is marked `FAILED` with a
+  `failure_reason` that names the limit, and is retriable via the existing
+  `/retry` endpoint once the window clears — no new failure mode needed,
+  it reuses the retry mechanism from step 2/3.
+- The limiter counts every *attempt*, not just successes — an attempt that
+  fails on the Anthropic side still consumed a slot. This is deliberate:
+  the guardrail is protecting call volume/cost, which is spent on attempt,
+  not on success.
+- Verified manually: submitting 3 feedback items back-to-back produced two
+  real Anthropic API calls (both failed on account billing in this
+  session, unrelated to the guardrail) and a third that was rejected
+  immediately by the limiter itself with
+  `"Rate limit exceeded: max 2 AI analyses per 60s. Retry later."` — never
+  reaching the network.
+- Known limitation: in-memory means the limit is per-process and resets on
+  restart, and wouldn't hold across multiple instances (would need a
+  shared store like Redis for that). Fine for this challenge's scope.
 
 ### Step 5 — Read API (not started)
 

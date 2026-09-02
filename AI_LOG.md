@@ -28,6 +28,14 @@ driven interactively step by step against the challenge spec.
    `FeedbackService`, `AnalysisDao`, `AnalysisService`,
    `FeedbackController`), a structural/style correction for consistency
    across the codebase.
+4. "implement the Rate-limit AI analysis in order to check it and to be
+   easily changeable... make consts that decide the limitation... for now
+   make it low limit so i can check it manually." — drove exporting
+   `RATE_LIMIT_MAX_ANALYSES` / `RATE_LIMIT_WINDOW_MS` as named consts at
+   the top of `AnalysisRateLimiter.ts` (rather than burying them inline)
+   and deliberately setting them low (`2` per `60s`) so the guardrail could
+   be triggered and observed within one manual test run instead of needing
+   dozens of requests.
 
 ## Where AI output needed correction
 

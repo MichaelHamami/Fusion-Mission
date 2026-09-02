@@ -1,6 +1,11 @@
 import { FeedbackDao } from "../dao/FeedbackDao";
 import { AnalysisDao, AiRequestError } from "../dao/AnalysisDao";
 import { AnalysisResultSchema } from "../schemas/analysisSchema";
+import {
+  AnalysisRateLimiter,
+  RATE_LIMIT_MAX_ANALYSES,
+  RATE_LIMIT_WINDOW_MS,
+} from "./AnalysisRateLimiter";
 
 export class AnalysisService {
   static async analyzeFeedback(feedbackId: string): Promise<void> {
@@ -11,6 +16,17 @@ export class AnalysisService {
     }
 
     FeedbackDao.updateStatus(feedbackId, "ANALYZING");
+
+    if (!AnalysisRateLimiter.tryAcquire()) {
+      FeedbackDao.saveAnalysisFailure(
+        feedbackId,
+        `Rate limit exceeded: max ${RATE_LIMIT_MAX_ANALYSES} AI analyses per ${
+          RATE_LIMIT_WINDOW_MS / 1000
+        }s. Retry later.`,
+        null
+      );
+      return;
+    }
 
     let rawResponse: string;
     try {
