@@ -22,3 +22,25 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 `);
+
+// Lightweight additive migration: add columns introduced after the initial
+// release if they're missing, so an existing dev DB doesn't need to be
+// deleted. Fine for this project's scale; a real migration tool would
+// replace this once there's more than one or two additive changes.
+const existingColumns = new Set(
+  (db.prepare(`PRAGMA table_info(feedback)`).all() as { name: string }[]).map(
+    (col) => col.name
+  )
+);
+
+const columnsToAdd: Record<string, string> = {
+  raw_ai_response: "TEXT",
+  analysis_result: "TEXT",
+  failure_reason: "TEXT",
+};
+
+for (const [column, definition] of Object.entries(columnsToAdd)) {
+  if (!existingColumns.has(column)) {
+    db.exec(`ALTER TABLE feedback ADD COLUMN ${column} ${definition}`);
+  }
+}
