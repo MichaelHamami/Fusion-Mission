@@ -155,7 +155,31 @@ others are about correctness or efficiency, not runtime cost.
   restart, and wouldn't hold across multiple instances (would need a
   shared store like Redis for that). Fine for this challenge's scope.
 
-### Step 5 — Read API (not started)
+### Step 5 — Read API ✅
+
+The list/detail endpoints already existed from step 2/3 (needed them to poll
+status while building the analysis pipeline), so this step was mostly about
+adding the explicitly-optional filtering/pagination on top:
+
+- `GET /api/feedback` — lists all feedback, each item including `status`,
+  `analysis_result` (parsed object, `null` until `DONE`), `raw_ai_response`,
+  and `failure_reason`.
+- `GET /api/feedback/:id` — single item, same shape, 404 if not found.
+- Optional query params on the list endpoint, validated with Zod:
+  `?status=FAILED` (filter), `?pageNumber=&pageSize=` (pagination,
+  1-indexed, `pageSize` capped at 100). Omitting all of them returns the
+  full list, unpaginated — the existing behavior from step 1/2 is
+  unchanged by default.
+- Kept the response as a plain array rather than wrapping it in an
+  `{ items, total }` envelope — pagination is explicitly optional here, and
+  a bare array is one less thing to design/version for a "do not overbuild"
+  3-hour challenge. A real paginated API would want a total count and
+  `has_more`; noted as a "what I'd improve with more time" item.
+- Verified manually: default list returns everything; `?status=FAILED`
+  returns only matching rows; `?pageSize=2&pageNumber=1` vs
+  `?pageSize=2&pageNumber=2` return non-overlapping pages in
+  `created_at DESC` order; an invalid `status` value or `pageSize=0` both
+  return 400 with a field-level Zod error.
 
 ## AI Collaboration Log
 

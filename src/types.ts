@@ -1,5 +1,11 @@
 export type FeedbackStatus = "RECEIVED" | "ANALYZING" | "DONE" | "FAILED";
 
+export interface FeedbackListOptions {
+  status?: FeedbackStatus;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 /** Row shape exactly as stored in SQLite (analysis_result is a raw JSON string). */
 export interface FeedbackRow {
   id: string;

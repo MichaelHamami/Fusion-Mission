@@ -72,11 +72,18 @@ this session.
 ## What I'd improve with more time
 
 *(running list, updated per step)*
-- Step 1: add pagination/filtering to the list endpoint; add integration
-  tests for the validation edge cases (whitespace-only content, over-length
-  content, non-string content).
+- Step 1: add integration tests for the validation edge cases
+  (whitespace-only content, over-length content, non-string content).
+  (Pagination/filtering landed in step 5.)
 - Step 2/3: add a startup reconciliation step for rows stuck in `ANALYZING`
   after a crash/restart (currently only `FAILED` is retriable); add a
   timeout around the Anthropic call so a hung request can't leave a row in
   `ANALYZING` indefinitely; run the live happy-path test once API credit is
   available.
+- Step 4: make the rate limit configurable via env var instead of a
+  hardcoded const, so it can be tuned per environment without a code
+  change; back it with a shared store (e.g. Redis) if this ever runs as
+  more than one process.
+- Step 5: add total count / `has_more` if the response is ever wrapped in
+  a real pagination envelope; add sorting options beyond the fixed
+  `created_at DESC`.

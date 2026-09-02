@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { FeedbackRow, FeedbackStatus } from "../types";
+import { FeedbackListOptions, FeedbackRow, FeedbackStatus } from "../types";
 
 export class FeedbackDao {
   static insert(row: {
@@ -21,10 +21,24 @@ export class FeedbackDao {
       | undefined;
   }
 
-  static findAll(): FeedbackRow[] {
-    return db
-      .prepare(`SELECT * FROM feedback ORDER BY created_at DESC`)
-      .all() as FeedbackRow[];
+  static findAll(options: FeedbackListOptions = {}): FeedbackRow[] {
+    const { status, pageNumber, pageSize } = options;
+    const params: (string | number)[] = [];
+
+    let sql = `SELECT * FROM feedback`;
+    if (status) {
+      sql += ` WHERE status = ?`;
+      params.push(status);
+    }
+    sql += ` ORDER BY created_at DESC`;
+
+    if (pageSize !== undefined) {
+      const offset = ((pageNumber ?? 1) - 1) * pageSize;
+      sql += ` LIMIT ? OFFSET ?`;
+      params.push(pageSize, offset);
+    }
+
+    return db.prepare(sql).all(...params) as FeedbackRow[];
   }
 
   static updateStatus(id: string, status: FeedbackStatus): void {

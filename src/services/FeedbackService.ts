@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { FeedbackDao } from "../dao/FeedbackDao";
 import { AnalysisService } from "./AnalysisService";
-import { FeedbackRow } from "../types";
+import { FeedbackListOptions, FeedbackRow } from "../types";
 
 export class FeedbackNotFoundError extends Error {}
 export class RetryNotAllowedError extends Error {}
@@ -34,8 +34,8 @@ export class FeedbackService {
     return FeedbackService.toApiView(row);
   }
 
-  static listFeedback() {
-    return FeedbackDao.findAll().map(FeedbackService.toApiView);
+  static listFeedback(options: FeedbackListOptions = {}) {
+    return FeedbackDao.findAll(options).map(FeedbackService.toApiView);
   }
 
   static retryAnalysis(id: string) {
